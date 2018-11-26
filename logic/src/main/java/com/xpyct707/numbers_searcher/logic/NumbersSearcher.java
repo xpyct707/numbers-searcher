@@ -1,5 +1,6 @@
 package com.xpyct707.numbers_searcher.logic;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 
 import java.io.IOException;
@@ -9,30 +10,12 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.PathMatcher;
-import java.nio.file.Paths;
 import java.util.Locale;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-//TODO Abb input data validation
-//TODO Optimize by using info of available memory size from JVM
-//TODO Handle all exceptions properly
+@Slf4j
 public class NumbersSearcher {
-    public static void main(String[] args) throws IOException {
-        Path inputFileDir = Paths.get("d:\\GIT\\NumbersSearcher\\test-data\\");
-        int numberToSearch = 840118442;
-
-        new NumbersSearcher().isFileContainsNumber(inputFileDir, numberToSearch);
-    }
-
     private long bufferSize = FileUtils.ONE_MB;
 
     public NumbersSearcher() {}
@@ -43,18 +26,27 @@ public class NumbersSearcher {
 
     public boolean isFileContainsNumber(Path filePath, int number) throws IOException {
         //FIXME Handle splitted edges correctly
+        validateFilePath(filePath);
         try (FileChannel fileChannel = FileChannel.open(filePath)) {
+            log.debug(String.format("Start to scan file '%s'.", filePath));
             while (isFileUnread(fileChannel)) {
+                log.debug(String.format("Loading next region of file '%s'.", filePath));
                 CharBuffer charBuffer = loadNextFileRegionToBuffer(fileChannel, bufferSize);
                 if (isStreamContainsNumber(Stream.of(charBuffer.toString()), number)) {
-                    System.out.println(String.format(Locale.UK,
-                            "File '%s' contains number '%d'.", filePath, number));
+                    log.info(String.format(Locale.UK, "File '%s' contains number '%d'.", filePath, number));
                     return true;
                 }
             }
-            System.out.println(String.format(Locale.UK,
-                    "File '%s' doesn't contain number '%d'.", filePath, number));
+            log.info(String.format(Locale.UK, "File '%s' doesn't contain number '%d'.", filePath, number));
             return false;
+        }
+    }
+
+    private void validateFilePath(Path filePath) {
+        if (Files.notExists(filePath)) {
+            String message = String.format(Locale.UK, "File '%s' doesn't exist.", filePath);
+            log.error(message);
+            throw new IllegalArgumentException(message);
         }
     }
 
@@ -65,8 +57,7 @@ public class NumbersSearcher {
     private CharBuffer loadNextFileRegionToBuffer(FileChannel inputChannel, long readSize) throws IOException {
         long currentPosition = inputChannel.position();
         readSize = checkAndCorrectReadSize(currentPosition, readSize, inputChannel.size());
-        MappedByteBuffer mappedByteBuffer = inputChannel
-                .map(FileChannel.MapMode.READ_ONLY, currentPosition, readSize);
+        MappedByteBuffer mappedByteBuffer = inputChannel.map(FileChannel.MapMode.READ_ONLY, currentPosition, readSize);
         inputChannel.position(currentPosition + readSize);
         return StandardCharsets.UTF_8.decode(mappedByteBuffer);
     }
