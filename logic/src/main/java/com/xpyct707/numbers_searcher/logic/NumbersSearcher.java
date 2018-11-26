@@ -16,6 +16,9 @@ import java.util.stream.Stream;
 
 @Slf4j
 public class NumbersSearcher {
+    private static final Pattern SPLIT_PATTERN = Pattern.compile(",");
+
+
     private long bufferSize = FileUtils.ONE_MB;
 
     public NumbersSearcher() {}
@@ -30,9 +33,8 @@ public class NumbersSearcher {
         try (FileChannel fileChannel = FileChannel.open(filePath)) {
             log.debug(String.format("Start to scan file '%s'.", filePath));
             while (isFileUnread(fileChannel)) {
-                log.debug(String.format("Loading next region of file '%s'.", filePath));
-                CharBuffer charBuffer = loadNextFileRegionToBuffer(fileChannel, bufferSize);
-                if (isStreamContainsNumber(Stream.of(charBuffer.toString()), number)) {
+                log.debug(String.format("Scanning next region of file '%s'.", filePath));
+                if (isBufferContainsNumber(loadNextFileRegionToBuffer(fileChannel), number)) {
                     log.info(String.format(Locale.UK, "File '%s' contains number '%d'.", filePath, number));
                     return true;
                 }
@@ -54,20 +56,21 @@ public class NumbersSearcher {
         return inputChannel.position() != inputChannel.size();
     }
 
-    private CharBuffer loadNextFileRegionToBuffer(FileChannel inputChannel, long readSize) throws IOException {
+    private CharBuffer loadNextFileRegionToBuffer(FileChannel inputChannel) throws IOException {
         long currentPosition = inputChannel.position();
-        readSize = checkAndCorrectReadSize(currentPosition, readSize, inputChannel.size());
+        long readSize = calculateReadSize(currentPosition, inputChannel.size());
         MappedByteBuffer mappedByteBuffer = inputChannel.map(FileChannel.MapMode.READ_ONLY, currentPosition, readSize);
         inputChannel.position(currentPosition + readSize);
         return StandardCharsets.UTF_8.decode(mappedByteBuffer);
     }
 
-    private long checkAndCorrectReadSize(long currentPosition, long readSize, long fileSize) {
-        return currentPosition + readSize > fileSize ? fileSize - currentPosition : readSize;
+    private long calculateReadSize(long currentPosition, long fileSize) {
+        return currentPosition + bufferSize > fileSize ? fileSize - currentPosition : bufferSize;
     }
 
-    private boolean isStreamContainsNumber(Stream<String> inputStream, int number) {
-        Pattern splitPattern = Pattern.compile(",");
-        return inputStream.flatMap(splitPattern::splitAsStream).anyMatch(String.valueOf(number)::equals);
+    private boolean isBufferContainsNumber(CharBuffer charBuffer, int number) {
+        return Stream.of(charBuffer.toString())
+                .flatMap(SPLIT_PATTERN::splitAsStream)
+                .anyMatch(String.valueOf(number)::equals);
     }
 }
