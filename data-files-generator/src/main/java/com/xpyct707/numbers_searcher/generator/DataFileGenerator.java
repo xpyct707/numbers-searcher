@@ -36,7 +36,7 @@ public class DataFileGenerator {
             log.debug(String.format(Locale.UK, "Created directory '%s'", outputDirectory.toAbsolutePath()));
         }
         Runnable createDataFileTask = () -> {
-            Path filePath = outputDirectory.resolve(ThreadLocalRandom.current().nextInt() + ".data");
+            Path filePath = outputDirectory.resolve(ThreadLocalRandom.current().nextInt() + ".data").toAbsolutePath();
             try {
                 log.info(String.format(Locale.UK, "Generating file '%s'.", filePath));
                 new DataFileGenerator().writeStreamToFile(ThreadLocalRandom.current().ints(), filePath);

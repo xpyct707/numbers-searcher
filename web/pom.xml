@@ -56,6 +56,7 @@
     </dependencies>
 
     <build>
+        <finalName>numbers-searcher</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -79,6 +80,26 @@
                     <outputDirectory>${project.basedir}/src/main/java</outputDirectory>
                     <clearOutputDir>false</clearOutputDir>
                 </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.6</version>
+                <configuration>
+                    <appendAssemblyId>false</appendAssemblyId>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <descriptor>src/assembly/build.xml</descriptor>
+                            <finalName>${project.build.finalName}</finalName>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
