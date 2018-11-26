@@ -98,12 +98,12 @@ public class DataFileGenerator {
             return;
         }
         if (args.length < 2) {
-            Path defaultPath = Paths.get("data-files");
+            Path defaultPath = Paths.get("data-files").toAbsolutePath();
             int defaultFilesNumber = 20;
             log.info("Default parameters values will be used.");
             DataFileGenerator.generateDataFiles(defaultPath, defaultFilesNumber);
         } else {
-            DataFileGenerator.generateDataFiles(Paths.get(args[0]), Integer.valueOf(args[1]));
+            DataFileGenerator.generateDataFiles(Paths.get(args[0]).toAbsolutePath(), Integer.valueOf(args[1]));
         }
     }
 
