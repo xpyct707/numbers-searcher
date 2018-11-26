@@ -5,6 +5,7 @@ import com.xpyct707.numbers_searcher.model.RequestHistory;
 import com.xpyct707.numbers_searcher.repository.RequestHistoryRepository;
 import com.xpyct707.numbers_searcher.web_service.Code;
 import com.xpyct707.numbers_searcher.web_service.Result;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -25,8 +26,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Slf4j
 @Component
 public class FilesRepository {
+    private static final String DELIMITER = ",";
+    private static final String FAILED_MESSAGE = "Searching failed.";
+
+
     @Value("${data.file.dir:data-files}")
     private String dataFilesDirectory;
 
@@ -36,21 +42,22 @@ public class FilesRepository {
     @Autowired
     private RequestHistoryRepository requestHistoryRepository;
 
-    public static void main(String[] args) {
-        FilesRepository filesRepository = new FilesRepository();
-        filesRepository.dataFilesDirectory = "d:\\GIT\\NumbersSearcher\\test-data\\";
-        filesRepository.findNumber(840118442).getFileNames().forEach(System.out::println);
-    }
 
-    public Result findNumber(Integer number) {
-        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-        Set<CompletableFuture<TaskExecutionResult>> tasks = createSearchingTasks(number, executor);
+    public Result findNumber(int number) {
+        log.debug("Started looking for '{}' in data files.", number);
+        int numberOfTreads = Runtime.getRuntime().availableProcessors();
+        log.debug("Using {} treads.", numberOfTreads);
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfTreads);
+        Set<CompletableFuture<TaskExecutionResult>> searchingTasks = createSearchingTasks(number, executor);
 
         try {
-            CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).get(timeoutInMinutes, TimeUnit.MINUTES);
+            CompletableFuture.allOf(searchingTasks.toArray(new CompletableFuture[0]))
+                    .get(timeoutInMinutes, TimeUnit.MINUTES);
         }  catch (InterruptedException e) {
+            log.error(FAILED_MESSAGE, e);
             throw new RuntimeException(e);
         } catch (ExecutionException | TimeoutException e) {
+            log.error(FAILED_MESSAGE, e);
             Result result = new Result();
             result.setCode(Code.ERROR);
             result.setError(e.getMessage());
@@ -60,7 +67,7 @@ public class FilesRepository {
             executor.shutdown();
         }
 
-        Result result = extractResultFromCompletedTasks(tasks);
+        Result result = extractResultFromCompletedTasks(searchingTasks);
         writeResultToDatabase(result, number);
         return result;
     }
@@ -98,6 +105,7 @@ public class FilesRepository {
                 .map(taskExecutionResult -> taskExecutionResult.inputFilePath.getFileName())
                 .map(Path::toString)
                 .collect(Collectors.toSet());
+        log.debug("Number was found in files: " + String.join(DELIMITER, fileNames));
         Result result = new Result();
         result.getFileNames().addAll(fileNames);
         result.setCode(Code.OK);
@@ -108,7 +116,7 @@ public class FilesRepository {
         requestHistoryRepository.save(new RequestHistory(
                 result.getCode(),
                 number,
-                String.join(",", result.getFileNames()),
+                String.join(DELIMITER, result.getFileNames()),
                 result.getError()));
     }
 
@@ -116,6 +124,7 @@ public class FilesRepository {
         try {
             return future.get();
         } catch (InterruptedException | ExecutionException e) {
+            log.error(FAILED_MESSAGE, e);
             throw new RuntimeException(e);
         }
     };

@@ -10,7 +10,6 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -31,22 +30,22 @@ public class NumbersSearcher {
         //FIXME Handle splitted edges correctly
         validateFilePath(filePath);
         try (FileChannel fileChannel = FileChannel.open(filePath)) {
-            log.debug(String.format("Start to scan file '%s'.", filePath));
+            log.debug("Start to scan file '{}'.", filePath);
             while (isFileUnread(fileChannel)) {
-                log.debug(String.format("Scanning next region of file '%s'.", filePath));
+                log.debug("Scanning next region of file '{}'.", filePath);
                 if (isBufferContainsNumber(loadNextFileRegionToBuffer(fileChannel), number)) {
-                    log.info(String.format(Locale.UK, "File '%s' contains number '%d'.", filePath, number));
+                    log.info("File '{}' contains number '{}'.", filePath, number);
                     return true;
                 }
             }
-            log.info(String.format(Locale.UK, "File '%s' doesn't contain number '%d'.", filePath, number));
+            log.info("File '{}' doesn't contain number '{}'.", filePath, number);
             return false;
         }
     }
 
     private void validateFilePath(Path filePath) {
         if (Files.notExists(filePath)) {
-            String message = String.format(Locale.UK, "File '%s' doesn't exist.", filePath);
+            String message = String.format("File '%s' doesn't exist.", filePath);
             log.error(message);
             throw new IllegalArgumentException(message);
         }
