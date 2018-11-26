@@ -1,5 +1,8 @@
 package com.xpyct707.numbers_searcher.generator;
 
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -14,16 +17,28 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
-//TODO Add logging
+@Slf4j
 public class DataFileGenerator {
+    private long fileSize = FileUtils.ONE_GB;
+
+    public DataFileGenerator() {
+        //Empty
+    }
+
+    public DataFileGenerator(long fileSize) {
+        this.fileSize = fileSize;
+    }
+
     public static void generateDataFiles(Path outputDirectory, int filesNumber) throws IOException {
         if (!Files.exists(outputDirectory)) {
             Files.createDirectory(outputDirectory);
+            log.debug(String.format("Created directory '%s'", outputDirectory.toAbsolutePath()));
         }
         Runnable createDataFileTask = () -> {
+            Path filePath = outputDirectory.resolve(ThreadLocalRandom.current().nextInt() + ".data");
             try {
-                new DataFileGenerator().writeStreamToFile(ThreadLocalRandom.current().ints(),
-                        outputDirectory.resolve(ThreadLocalRandom.current().nextInt() + ".data"));
+                log.info(String.format("Generating file '%s'.", filePath));
+                new DataFileGenerator().writeStreamToFile(ThreadLocalRandom.current().ints(), filePath);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -36,15 +51,16 @@ public class DataFileGenerator {
     }
 
     private void writeStreamToFile(IntStream inputStream, Path destFile) throws IOException {
-        final long size1Gb = 1073741824L;
         final char comma = ',';
+        log.debug(String.format("Begin to write file '%s'.", destFile));
         try (Writer writer = new LimitedOutputStreamWriter(
-                Files.newOutputStream(destFile), StandardCharsets.UTF_8, size1Gb)) {
+                Files.newOutputStream(destFile), StandardCharsets.UTF_8, fileSize)) {
             inputStream.mapToObj(String::valueOf).forEach(s -> {
                 try {
                     writer.write(s);
                     writer.write(comma);
                 } catch (IOException e) {
+                    log.info(String.format("File '%s' was generated.", destFile));
                     throw new RuntimeException(e);
                 }
             });
@@ -76,6 +92,24 @@ public class DataFileGenerator {
     }
 
     public static void main(String[] args) throws IOException {
-        DataFileGenerator.generateDataFiles(Paths.get("test-data"), 14);
+        if (args.length > 2) {
+            printUsage();
+            return;
+        }
+        if (args.length < 2) {
+            Path defaultPath = Paths.get("data-files");
+            int defaultFilesNumber = 20;
+            log.info("Default parameters values will be used.");
+            DataFileGenerator.generateDataFiles(defaultPath, defaultFilesNumber);
+        } else {
+            DataFileGenerator.generateDataFiles(Paths.get(args[0]), Integer.valueOf(args[1]));
+        }
+    }
+
+    private static void printUsage() {
+        System.out.println("Parameters:");
+        System.out.println("<path to destination folder> <files number>");
+        System.out.println("Defaults:");
+        System.out.println("data-files 20");
     }
 }
