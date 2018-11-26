@@ -1,0 +1,1 @@
+java -jar data-files-generator.jar "$@"

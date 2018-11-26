@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
@@ -32,12 +33,12 @@ public class DataFileGenerator {
     public static void generateDataFiles(Path outputDirectory, int filesNumber) throws IOException {
         if (!Files.exists(outputDirectory)) {
             Files.createDirectory(outputDirectory);
-            log.debug(String.format("Created directory '%s'", outputDirectory.toAbsolutePath()));
+            log.debug(String.format(Locale.UK, "Created directory '%s'", outputDirectory.toAbsolutePath()));
         }
         Runnable createDataFileTask = () -> {
             Path filePath = outputDirectory.resolve(ThreadLocalRandom.current().nextInt() + ".data");
             try {
-                log.info(String.format("Generating file '%s'.", filePath));
+                log.info(String.format(Locale.UK, "Generating file '%s'.", filePath));
                 new DataFileGenerator().writeStreamToFile(ThreadLocalRandom.current().ints(), filePath);
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -52,7 +53,7 @@ public class DataFileGenerator {
 
     private void writeStreamToFile(IntStream inputStream, Path destFile) throws IOException {
         final char comma = ',';
-        log.debug(String.format("Begin to write file '%s'.", destFile));
+        log.debug(String.format(Locale.UK, "Begin to write file '%s'.", destFile));
         try (Writer writer = new LimitedOutputStreamWriter(
                 Files.newOutputStream(destFile), StandardCharsets.UTF_8, fileSize)) {
             inputStream.mapToObj(String::valueOf).forEach(s -> {
@@ -60,7 +61,7 @@ public class DataFileGenerator {
                     writer.write(s);
                     writer.write(comma);
                 } catch (IOException e) {
-                    log.info(String.format("File '%s' was generated.", destFile));
+                    log.info(String.format(Locale.UK, "File '%s' was generated.", destFile));
                     throw new RuntimeException(e);
                 }
             });

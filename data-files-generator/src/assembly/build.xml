@@ -27,6 +27,7 @@
             <outputDirectory>/</outputDirectory>
             <includes>
                 <include>files-generator.bat</include>
+                <include>files-generator.sh</include>
             </includes>
         </fileSet>
     </fileSets>
